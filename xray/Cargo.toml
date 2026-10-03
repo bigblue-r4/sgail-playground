@@ -1,0 +1,22 @@
+[package]
+name        = "xray"
+version     = "0.1.0"
+edition     = "2021"
+description = "Browser wrapper for the Hidden Text X-Ray playground: runs deobfuscate + unicode-interference over one input."
+license     = "MIT"
+publish     = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The published crates, exactly as anyone would install them.
+deobfuscate          = { version = "=1.18.1", default-features = false, features = ["std"] }
+unicode-interference = "=1.0.0"
+serde                = { version = "1", features = ["derive"] }
+serde_json           = "1"
+wasm-bindgen         = "0.2"
+
+[profile.release]
+opt-level = "s"
+lto = true

@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        run: rustup update stable && rustup default stable && rustup target add wasm32-unknown-unknown
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-pack
+            ~/.cargo/registry
+            xray/target
+          key: xray-${{ hashFiles('xray/Cargo.lock') }}
+      - name: Test (examples are the fixture)
+        working-directory: xray
+        run: cargo test --locked
+      - name: Install wasm-pack
+        run: command -v wasm-pack || cargo install wasm-pack --version 0.15.0 --locked
+      - name: Build for the browser
+        working-directory: xray
+        run: wasm-pack build --release --target web --no-typescript --out-dir ../site/pkg
+      - name: Smoke test the browser build
+        run: node scripts/smoke.mjs
+      - name: Package the site
+        run: rm -f site/pkg/.gitignore site/pkg/package.json
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
