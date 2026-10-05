@@ -1,6 +1,14 @@
-# Hidden Text X-Ray
+# SGAIL playground
 
-**Try it: https://bigblue-r4.github.io/sgail-playground/**
+Click-and-try pages for SGAIL's open-source security tools. Each runs the real code in your browser,
+compiled to WebAssembly. Nothing you type is sent anywhere.
+
+| page | what you do | what runs |
+|---|---|---|
+| **[Hidden Text X-Ray](https://bigblue-r4.github.io/sgail-playground/)** | paste text, see hidden characters, look-alike letters and encoded instructions | deobfuscate + unicode-interference |
+| **[Tamper-Evident Farm Log](https://bigblue-r4.github.io/sgail-playground/witness/)** | try to change a poultry house's log and see what the witness catches | the kiss-protocol witness |
+
+# Hidden Text X-Ray
 
 Text can look harmless to a person and carry something else to an AI model: look-alike letters from
 another alphabet, invisible characters, encoded instructions. Paste anything into the page and it shows
@@ -45,6 +53,35 @@ tests and the smoke test both fail if the detectors stop matching what the page 
 `…/#tags` opens straight onto an example.
 
 CI runs the tests, builds the page and deploys it to GitHub Pages on every push to `main`.
+
+# Tamper-Evident Farm Log
+
+`site/witness/`, built from `witness/`. One night in a poultry house, recorded by the Harborlight witness
+([kiss-protocol](https://github.com/bigblue-r4/kiss-protocol) v3.3.1). Visitors try to change the
+record: edit an entry, delete one, cut off the end, delete the signed head, or do a full cover-up that
+re-signs the head with the machine's own keys. Two verdicts update live (`witness verify` on the
+machine, `witness audit` against a mirror), and a Merkle tree diagram shows the changed hashes in red
+from the edited entry up to the root.
+
+**What runs.** `witness/internal/` is copied unchanged from kiss-protocol by
+`witness/scripts/sync-from-kiss.sh` (merkle, store, encrypt, signer). The browser has no disk, so
+`witness/demo` ports the store's head checks and the audit comparison with only the file I/O removed.
+`demo/port_test.go` writes logs to disk with the real `store.Append`, tampers with the files, and
+requires the real `store.Open` and the port to reach the same verdict with the same error. A
+deliberately broken port fails those tests.
+
+**Where it stops.** It detects and records; it doesn't prevent anything or control the house. The
+head is signed on the same machine, so full control of that machine lets someone re-sign a rewritten
+log and pass the local check. The page shows exactly that, and the mirror catching it. Encryption at
+rest isn't shown.
+
+```sh
+cd witness && go test ./...
+GOOS=js GOARCH=wasm go build -o ../site/witness/witness.wasm ./cmd/wasm
+cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" ../site/witness/
+```
+
+After a kiss-protocol release: `witness/scripts/sync-from-kiss.sh <kiss checkout>`, then `go test ./...`.
 
 ## License
 

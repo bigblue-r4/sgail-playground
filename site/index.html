@@ -32,7 +32,10 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink);
   font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-main { max-width: 860px; margin: 0 auto; padding: 32px 16px 48px; }
+main { max-width: 860px; margin: 0 auto; padding: 20px 16px 48px; }
+nav { font-size: 0.88rem; margin-bottom: 18px; display: flex; gap: 14px; flex-wrap: wrap; }
+nav a { color: var(--muted); text-decoration: none; }
+nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
 h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.01em; }
 h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
   margin: 28px 0 10px; font-weight: 600; }
@@ -105,6 +108,7 @@ a { color: var(--accent); }
 </head>
 <body>
 <main>
+  <nav><a href="./" aria-current="page">Hidden Text X-Ray</a><a href="witness/">Tamper-Evident Log</a></nav>
   <h1>Hidden Text X-Ray</h1>
   <p class="lede">Text can look harmless to a person and carry something else to an AI model: fake letters,
     invisible characters, encoded instructions. Paste anything and see what's really there.</p>

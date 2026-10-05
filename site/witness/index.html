@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Tamper-Evident Farm Log</title>
+<meta name="description" content="Try to change what a poultry house's automation log says happened. The Harborlight witness's own verification code runs in your browser and shows what it catches.">
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1c1d1f; --muted: #5f6368; --line: #dedbd3;
+  --accent: #1f5f8b; --accent-ink: #ffffff;
+  --ok: #1e7a46; --ok-bg: #e6f4ea; --bad: #b3261e; --bad-bg: #fbe7e5; --warn: #9a5b00; --warn-bg: #fdf1dc;
+  --node: #9aa0a6;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131416; --panel: #1c1d20; --ink: #e8e6e1; --muted: #a0a3a8; --line: #33353a;
+    --accent: #6fb3e0; --accent-ink: #0d1114;
+    --ok: #6fcf97; --ok-bg: #17291f; --bad: #f2857c; --bad-bg: #331a18; --warn: #f0b45a; --warn-bg: #2e2414;
+    --node: #6b7075;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131416; --panel: #1c1d20; --ink: #e8e6e1; --muted: #a0a3a8; --line: #33353a;
+  --accent: #6fb3e0; --accent-ink: #0d1114;
+  --ok: #6fcf97; --ok-bg: #17291f; --bad: #f2857c; --bad-bg: #331a18; --warn: #f0b45a; --warn-bg: #2e2414;
+  --node: #6b7075;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 900px; margin: 0 auto; padding: 20px 16px 48px; }
+nav { font-size: 0.88rem; margin-bottom: 18px; display: flex; gap: 14px; flex-wrap: wrap; }
+nav a { color: var(--muted); text-decoration: none; }
+nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.01em; }
+h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+  margin: 30px 0 10px; font-weight: 600; }
+.lede { color: var(--muted); margin: 0 0 4px; font-size: 1.05rem; }
+.local { font-size: 0.9rem; color: var(--muted); margin: 0 0 20px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+.attacks { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font: inherit; cursor: pointer; }
+button.atk { border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 999px; padding: 6px 13px; font-size: 0.9rem; }
+button.atk:hover { border-color: var(--accent); }
+button.atk[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.reset { border: 0; background: none; color: var(--accent); padding: 6px 4px; font-size: 0.9rem; text-decoration: underline; }
+.story { font-size: 0.95rem; color: var(--muted); margin: 12px 0 0; min-height: 1.5em; }
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.check { border-radius: 12px; padding: 14px 16px; border: 1px solid var(--line); background: var(--panel); }
+.check .where { font-size: 0.8rem; color: var(--muted); margin: 0; }
+.check .cmd { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.check .verdict { font-size: 1.15rem; font-weight: 700; margin: 4px 0 4px; }
+.check .msg { font-family: var(--mono); font-size: 0.78rem; word-break: break-word; margin: 0; color: var(--muted); }
+.check.ok { border-color: var(--ok); } .check.ok .verdict { color: var(--ok); }
+.check.bad { border-color: var(--bad); background: var(--bad-bg); } .check.bad .verdict { color: var(--bad); }
+.check.warn { border-color: var(--warn); } .check.warn .verdict { color: var(--warn); }
+.explain { margin: 12px 0 0; font-size: 0.95rem; }
+.log { display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: 3.2em 1fr auto; gap: 4px 12px; align-items: start;
+  padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+.row.changed { border-color: var(--bad); background: var(--bad-bg); }
+.row.warnrow .what { color: var(--warn); font-weight: 600; }
+.row .time { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); padding-top: 1px; }
+.row .what { font-size: 0.95rem; }
+.row .src { font-size: 0.78rem; color: var(--muted); }
+.row .tools { display: flex; gap: 2px; }
+.row .tools button { border: 0; background: none; color: var(--accent); font-size: 0.82rem; padding: 2px 6px; }
+.row .editor { grid-column: 1 / -1; display: grid; gap: 6px; }
+.row textarea { width: 100%; min-height: 64px; font: 0.82rem/1.4 var(--mono); padding: 8px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.row .editor .btns { display: flex; gap: 8px; }
+.row .editor .btns button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 3px 10px; font-size: 0.85rem; }
+.row .err { color: var(--bad); font-size: 0.82rem; }
+.tools-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tools-row button { border: 1px dashed var(--muted); background: none; color: var(--ink); border-radius: 8px; padding: 5px 11px; font-size: 0.85rem; }
+.tools-row button:hover { border-color: var(--bad); color: var(--bad); }
+.heads { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.85rem; margin-bottom: 10px; }
+.heads dt { color: var(--muted); }
+.heads dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+.heads .match { color: var(--ok); } .heads .nomatch { color: var(--bad); font-weight: 600; }
+#tree { overflow-x: auto; }
+svg.tree { width: 100%; min-width: 560px; height: auto; display: block; }
+svg.tree line { stroke: var(--line); stroke-width: 2; }
+svg.tree line.changed { stroke: var(--bad); stroke-width: 3; }
+svg.tree circle { fill: var(--panel); stroke: var(--node); stroke-width: 2; }
+svg.tree circle.changed { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 3; }
+svg.tree circle.root { stroke-width: 3; }
+svg.tree text { fill: var(--muted); font: 11px var(--mono); text-anchor: middle; }
+svg.tree text.changed { fill: var(--bad); }
+svg.tree text.leaf { font: 11px system-ui, sans-serif; }
+.legend { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; }
+footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 0.88rem; color: var(--muted); }
+footer p { margin: 0 0 8px; }
+a { color: var(--accent); }
+.loading { color: var(--muted); }
+@media (max-width: 620px) {
+  h1 { font-size: 1.6rem; }
+  .checks { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+  <nav><a href="../">Hidden Text X-Ray</a><a href="./" aria-current="page">Tamper-Evident Log</a></nav>
+  <h1>Tamper-Evident Farm Log</h1>
+  <p class="lede">Last night someone lowered the ventilation in house 3 remotely and the birds overheated.
+    The Harborlight witness recorded it. Now try to change what the record says.</p>
+  <p class="local">This runs the witness's own verification code in your browser. Nothing is sent anywhere.</p>
+
+  <h2>Try to cover it up</h2>
+  <div class="attacks" id="attacks"></div>
+  <p class="story" id="story"></p>
+
+  <div class="checks" id="checks"><p class="loading">Loading the witness…</p></div>
+  <p class="explain" id="explain"></p>
+
+  <h2>The log</h2>
+  <div class="log" id="log"></div>
+  <div class="tools-row" id="tools"></div>
+
+  <h2>Why it's caught</h2>
+  <div class="panel">
+    <dl class="heads" id="heads"></dl>
+    <div id="tree" tabindex="0" aria-label="Merkle tree diagram (scrolls sideways on small screens)"></div>
+    <p class="legend">Every entry is hashed, pairs of hashes are hashed together, up to one root. The witness signs
+      that root. Change any entry and every hash above it changes too (red), so the root no longer matches.</p>
+  </div>
+
+  <footer>
+    <p><strong>What runs.</strong> The witness from <a href="https://github.com/bigblue-r4/kiss-protocol">kiss-protocol</a>
+      v3.3.1, compiled for the browser. The Merkle tree is its own code, unchanged. The head check and the mirror audit
+      are its store and audit code with only the file reading and writing taken out, and a test runs them against the
+      real store to prove they give the same verdicts.</p>
+    <p><strong>What it isn't.</strong> It detects and records. It can't stop anyone and it doesn't control the house.
+      The head is signed on the same machine, so someone with full control of that machine can re-sign a rewritten
+      log, and the local check passes. A copy of the head kept somewhere else (the mirror) is what catches that, so the
+      mirror belongs on a different machine. The real log is also encrypted on disk; that part isn't shown here.
+      The keys on this page are made fresh in your browser.</p>
+    <p>See it run on a simulated farm: <a href="https://github.com/bigblue-r4/harborlight-poultry-demo">harborlight-poultry-demo</a> ·
+      <a href="https://github.com/bigblue-r4/sgail-playground">Source for this page</a> · SGAIL Labs</p>
+  </footer>
+</main>
+<script src="wasm_exec.js"></script>
+<script type="module" src="witness.js"></script>
+</body>
+</html>
