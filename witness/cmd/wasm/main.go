@@ -46,6 +46,7 @@ func main() {
 		"truncate":   method(func(a []js.Value) error { ses.Truncate(a[0].Int()); return nil }),
 		"deleteHead": method(func([]js.Value) error { ses.DeleteHead(); return nil }),
 		"resign":     method(func([]js.Value) error { return ses.Resign() }),
+		"forge":      method(func([]js.Value) error { return ses.ForgeWithOwnKey() }),
 	}))
 	select {} // keep the Go side alive for the page
 }

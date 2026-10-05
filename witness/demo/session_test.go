@@ -49,6 +49,12 @@ func TestEveryAttackOnTheLogIsCaught(t *testing.T) {
 			}
 			return s.Resign()
 		}, "", "tamper"},
+		{"delete + sign with own key", func(s *Session) error {
+			if err := s.Delete(2); err != nil {
+				return err
+			}
+			return s.ForgeWithOwnKey()
+		}, "neither this witness's signer", "fail"},
 		{"delete head + re-sign", func(s *Session) error {
 			s.Truncate(3)
 			s.DeleteHead()

@@ -163,6 +163,27 @@ func (s *Session) Resign() error {
 	return nil
 }
 
+// ForgeWithOwnKey is a cover-up by someone who has the machine key but not
+// the witness's signing key: they sign a fresh head with a key of their own.
+// Before kiss-protocol v3.3.2 the witness accepted it, trusting the key named
+// in the head; now the head must carry the witness's own signature.
+func (s *Session) ForgeWithOwnKey() error {
+	own, err := newMemSigner()
+	if err != nil {
+		return err
+	}
+	prev := ""
+	if s.Head != nil {
+		prev = s.Head.PrevRoot
+	}
+	head, err := MakeHead(s.key, own, Leaves(s.Entries), prev, s.day.Add(23*time.Hour))
+	if err != nil {
+		return err
+	}
+	s.Head = &head
+	return nil
+}
+
 // ── What the page shows ─────────────────────────────────────────────────────
 
 // Check is one verdict, with the witness's own error text when it fails.
@@ -189,7 +210,7 @@ func (s *Session) State() State {
 	st := State{Entries: s.Entries, Head: s.Head, Mirror: s.Mirror, Tree: Tree(leaves)}
 	markChanged(st.Tree, s.trusted)
 
-	if err := VerifyHead(s.key, s.Head, leaves); err != nil {
+	if err := VerifyHead(s.key, s.signer, s.Head, leaves); err != nil {
 		st.Verify = Check{false, "fail", "store: tree head integrity: " + err.Error()}
 		st.Audit = Check{false, "fail", "open store: store: tree head integrity: " + err.Error()}
 		return st

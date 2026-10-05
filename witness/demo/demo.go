@@ -6,8 +6,9 @@
 //
 //   - Merkle tree hashing: internal/merkle, copied unchanged from kiss-protocol.
 //   - Entry and TreeHead types, ErrMissingTreeHead: internal/store, unchanged.
-//   - leafHash, treeHeadSigInput, computeMAC, writeTreeHead, verifyTreeHead:
-//     ported from internal/store/store.go with only the file I/O removed.
+//   - leafHash, treeHeadSigInput, computeMAC, writeTreeHead, verifyTreeHead,
+//     keyAccepted: ported from internal/store/store.go with only the file I/O
+//     removed (and no trust allowlist: the page has one key).
 //   - Audit: the comparison in cmd/witness/audit.go.
 //
 // port_test.go checks the ports against the real store: it writes logs to
@@ -19,6 +20,7 @@
 package demo
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/binary"
 	"encoding/hex"
@@ -94,8 +96,9 @@ func MakeHead(key []byte, s signer.Signer, leaves [][32]byte, prevRoot string, n
 }
 
 // VerifyHead is store.verifyTreeHead without the file read. A nil head means
-// the head file is missing.
-func VerifyHead(key []byte, head *store.TreeHead, leaves [][32]byte) error {
+// the head file is missing. s is the witness's own signer (nil: a reader with
+// no key to pin to); the head's signature must be s's.
+func VerifyHead(key []byte, s signer.Signer, head *store.TreeHead, leaves [][32]byte) error {
 	if head == nil {
 		if len(leaves) == 0 {
 			return nil
@@ -135,6 +138,10 @@ func VerifyHead(key []byte, head *store.TreeHead, leaves [][32]byte) error {
 		pubBytes, err := hex.DecodeString(head.SignerKey)
 		if err != nil || len(pubBytes) != ed25519.PublicKeySize {
 			return errors.New("tree head: malformed signer_key")
+		}
+		if s != nil && !bytes.Equal(pubBytes, s.PublicKey()) {
+			return fmt.Errorf("%w (head key %s, this witness's key %s)",
+				store.ErrUnexpectedSigner, head.SignerKey, hex.EncodeToString(s.PublicKey()))
 		}
 		if !ed25519.Verify(ed25519.PublicKey(pubBytes), sigInput(uint64(len(leaves)), root), rawSig) {
 			return errors.New("tree head signature verification failed")
