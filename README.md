@@ -57,8 +57,8 @@ CI runs the tests, builds the page and deploys it to GitHub Pages on every push 
 # Tamper-Evident Farm Log
 
 `site/witness/`, built from `witness/`. One night in a poultry house, recorded by the Harborlight witness
-([kiss-protocol](https://github.com/bigblue-r4/kiss-protocol) v3.3.1). Visitors try to change the
-record: edit an entry, delete one, cut off the end, delete the signed head, or do a full cover-up that
+([kiss-protocol](https://github.com/bigblue-r4/kiss-protocol) v3.3.2). Visitors try to change the
+record: edit an entry, delete one, cut off the end, delete the signed head, sign a fresh head with a different key, or do a full cover-up that
 re-signs the head with the machine's own keys. Two verdicts update live (`witness verify` on the
 machine, `witness audit` against a mirror), and a Merkle tree diagram shows the changed hashes in red
 from the edited entry up to the root.

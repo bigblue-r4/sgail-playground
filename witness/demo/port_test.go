@@ -7,6 +7,7 @@ package demo
 import (
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,7 +101,7 @@ func sameVerdict(t *testing.T, r realLog, entries []store.Entry, head *store.Tre
 	if st != nil {
 		_ = st.Close()
 	}
-	portErr := VerifyHead(r.key, head, Leaves(entries))
+	portErr := VerifyHead(r.key, r.s, head, Leaves(entries))
 	if (realErr == nil) != (portErr == nil) {
 		t.Fatalf("verdicts differ: store.Open=%v port=%v", realErr, portErr)
 	}
@@ -184,6 +185,21 @@ func TestPortAgreesOnAForgedHead(t *testing.T) {
 	r.writeHead(t, forged)
 	if err := sameVerdict(t, r, tampered, &forged); err != nil {
 		t.Fatalf("a re-signed head should pass the local check, got %v", err)
+	}
+}
+
+func TestPortAgreesOnAHeadSignedWithAnotherKey(t *testing.T) {
+	r, entries, head := writeReal(t)
+	tampered := append(entries[:2:2], entries[3:]...)
+	r.rewriteLog(t, tampered)
+	other, err := newMemSigner()
+	if err != nil {
+		t.Fatal(err)
+	}
+	forged, _ := MakeHead(r.key, other, Leaves(tampered), head.PrevRoot, time.Now())
+	r.writeHead(t, forged)
+	if err := sameVerdict(t, r, tampered, &forged); !errors.Is(err, store.ErrUnexpectedSigner) {
+		t.Fatalf("got %v, want ErrUnexpectedSigner", err)
 	}
 }
 
