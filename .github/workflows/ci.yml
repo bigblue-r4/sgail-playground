@@ -32,6 +32,19 @@ jobs:
         run: wasm-pack build --release --target web --no-typescript --out-dir ../site/pkg
       - name: Smoke test the browser build
         run: node scripts/smoke.mjs
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: witness/go.sum
+      - name: Test the witness (ports checked against the real store)
+        working-directory: witness
+        run: go test ./...
+      - name: Build the witness for the browser
+        working-directory: witness
+        run: |
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o ../site/witness/witness.wasm ./cmd/wasm
+          cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" ../site/witness/ 2>/dev/null \
+            || cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" ../site/witness/
       - name: Package the site
         run: rm -f site/pkg/.gitignore site/pkg/package.json
       - uses: actions/upload-pages-artifact@v3

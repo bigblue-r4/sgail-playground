@@ -1,2 +1,4 @@
 /xray/target
 /site/pkg
+/site/witness/witness.wasm
+/site/witness/wasm_exec.js
