@@ -185,6 +185,12 @@ func Audit(leaves [][32]byte, remote store.TreeHead) AuditResult {
 		}
 		return AuditResult{"ok", fmt.Sprintf("local and mirror agree: leaves=%d", localSize)}
 	default:
+		// Since v3.3.3: the log cut to the mirror's size must still have the
+		// mirror's root (store.RootAt), or history before it was rewritten.
+		prefix := merkle.Root(leaves[:remote.Size])
+		if hex.EncodeToString(prefix[:]) != remote.Root {
+			return AuditResult{"tamper", "mirror disagrees: the local log does not extend the mirror's head"}
+		}
 		return AuditResult{"behind", fmt.Sprintf("mirror is %d leaf(ves) behind local", localSize-remote.Size)}
 	}
 }

@@ -204,7 +204,7 @@ func TestPortAgreesOnAHeadSignedWithAnotherKey(t *testing.T) {
 }
 
 func TestAuditMatchesWitnessAudit(t *testing.T) {
-	_, entries, head := writeReal(t)
+	rl, entries, head := writeReal(t)
 	leaves := Leaves(entries)
 	if a := Audit(leaves, head); a.Status != "ok" {
 		t.Fatalf("same log: %+v", a)
@@ -217,9 +217,15 @@ func TestAuditMatchesWitnessAudit(t *testing.T) {
 	if a := Audit(other, head); a.Status != "tamper" || !strings.Contains(a.Message, "root mismatch") {
 		t.Fatalf("rewritten: %+v", a)
 	}
-	behind := head
-	behind.Size = 6
-	if a := Audit(leaves, behind); a.Status != "behind" {
+	// Mirror behind with the same history: lag, not tampering.
+	earlier, _ := MakeHead(rl.key, nil, leaves[:6], "", time.Now())
+	if a := Audit(leaves, earlier); a.Status != "behind" {
 		t.Fatalf("mirror behind: %+v", a)
+	}
+	// Mirror behind, but the history it holds was rewritten (attack fixed in v3.3.3).
+	rewritten := append([][32]byte{}, leaves...)
+	rewritten[1][0] ^= 1
+	if a := Audit(rewritten, earlier); a.Status != "tamper" || !strings.Contains(a.Message, "does not extend") {
+		t.Fatalf("rewrite then append: %+v", a)
 	}
 }
