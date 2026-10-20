@@ -1,9 +1,9 @@
 module github.com/bigblue-r4/sgail-playground/witness
 
-go 1.22
+go 1.25.0
 
 require (
-	golang.org/x/crypto v0.19.0
+	golang.org/x/crypto v0.52.0
 	lukechampine.com/blake3 v1.4.1
 )
 
